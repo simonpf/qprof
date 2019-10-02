@@ -133,6 +133,13 @@ def write_to_file(file, data):
     v_tbs_min = file.variables["tbs_min"]
     v_tbs_max = file.variables["tbs_max"]
 
+    v_year = file.variables["tbs_min"]
+    v_month = file.variables["tbs_max"]
+    v_day = file.variables["tbs_max"]
+    v_hour = file.variables["hour"]
+    v_minute = file.variables["minute"]
+    v_second = file.variables["second"]
+
     i = file.dimensions["samples"].size
     for d in data:
 
@@ -174,6 +181,13 @@ def create_output_file(path):
     file.createVariable("tcwv", "f4", dimensions = ("samples",))
     file.createVariable("T2m", "f4", dimensions = ("samples",))
     file.createVariable("surface_precipitation", "f4", dimensions = ("samples",))
+    # Also include date.
+    file.createVariable("year", "i4", dimensions = ("samples",))
+    file.createVariable("month", "i4", dimensions = ("samples",))
+    file.createVariable("day", "i4", dimensions = ("samples",))
+    file.createVariable("hour", "i4", dimensions = ("samples",))
+    file.createVariable("minute", "i4", dimensions = ("samples",))
+    file.createVariable("second", "i4", dimensions = ("samples",))
 
     file["tbs_min"][:] = 1e30
     file["tbs_max"][:] = 0.0

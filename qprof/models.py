@@ -6,8 +6,10 @@ This module provides an implementation of quantile regression neural networks (Q
 using the pytorch deep learning framework.
 """
 import torch
+import numpy as np
 from torch import nn
 from torch import optim
+from tqdm.auto import tqdm
 
 ################################################################################
 # The quantile loss
@@ -43,6 +45,7 @@ class QuantileLoss:
             quantiles: Array or iterable containing the quantiles to be estimated.
         """
         self.quantiles = quantiles
+        self.n_quantiles = len(quantiles)
 
     def __call__(self, y_pred, y_true):
         """
@@ -63,7 +66,7 @@ class QuantileLoss:
             y = y_pred[:, i]
             dy = y - y_true
             dya = torch.abs(y - y_true)
-            l += torch.where(dy > 0.0,
+            l += torch.where(dy <= 0.0,
                              q * dya,
                              (1.0 - q) * dya)
         return torch.mean(l, axis = 0)
@@ -93,7 +96,12 @@ class QRNN:
             width(int): The number of neurons in the inner layers of the network.
             activation: The activation function to use for the inner layers of the network.
         """
-        self.quantiles = quantiles
+        self.input_dimension = input_dimension
+        self.quantiles = np.array(quantiles)
+        self.depth = depth
+        self.width = width
+        self.activation = nn.ReLU
+
         n_quantiles = len(quantiles)
 
         self.main = nn.Sequential()
@@ -144,9 +152,12 @@ class QRNN:
         """
 
         for i in range(n_epochs):
+
             err = 0.0
             n = 0
-            for x, y in training_data:
+            iterator = tqdm(enumerate(training_data), total = len(training_data))
+            for j, (x, y) in iterator:
+
                 self.optimizer.zero_grad()
                 y_pred = self.main(x)
                 c = self.criterion(y_pred, y)
@@ -164,6 +175,9 @@ class QRNN:
                     c.backward()
                     self.optimizer.step()
 
+                if j % 100:
+                    iterator.set_postfix({"Training errror" : err / n})
+
             # Save training error
             self.training_errors.append(err / n)
 
@@ -178,3 +192,79 @@ class QRNN:
                 n += x.size()[0]
 
             self.validation_errors.append(val_err / n)
+
+    def predict(self, x):
+        """
+        Predict quantiles for given input.
+
+        Args:
+            x: 2D tensor containing the inputs for which for which to
+                predict the quantiles.
+
+        Returns:
+            tensor: 2D tensor containing the predicted quantiles along
+                the last dimension.
+        """
+        return self.main(x)
+
+    def calibration(self, data):
+        """
+        Computes the calibration of the predictions from the neural network.
+
+        Arguments:
+            data: torch dataloader object providing the data for which to compute
+                the calibration.
+
+        Returns:
+            (intervals, frequencies): Tuple containing the confidence intervals and
+                corresponding observed frequencies.
+        """
+        n_intervals = self.quantiles.size // 2
+        qs = self.quantiles
+        intervals = np.array([q_r - q_l for (q_l, q_r) in zip(qs, reversed(qs))])[:n_intervals]
+        counts = np.zeros(n_intervals)
+
+        total = 0.0
+
+        iterator = tqdm(data)
+        for x, y in iterator:
+            y_pred = self.predict(x)
+
+            for i in range(n_intervals):
+                l, r =  y_pred[:, i], y_pred[:, -(i + 1)]
+                counts[i] += np.logical_and(y >= l, y < r).sum()
+
+            total += x.size()[0]
+
+        return intervals[::-1], (counts / total)[::-1]
+
+
+    def save(self, path):
+        """
+        Save QRNN to file.
+
+        Arguments:
+            The path in which to store the QRNN.
+        """
+        torch.save({"input_dimension" : self.input_dimension,
+                    "quantiles" : self.quantiles,
+                    "width" : self.width,
+                    "depth" : self.depth,
+                    "activation" : self.activation,
+                    "network_state" : self.main.state_dict(),
+                    "optimizer_state" : self.optimizer.state_dict()},
+                    path)
+
+    @staticmethod
+    def load(self, path):
+        """
+        Load QRNN from file.
+
+        Arguments:
+            path: Path of the file where the QRNN was stored.
+        """
+        state = torch.load(path)
+        keys = ["input_dimension", "quantiles", "depth", "width", "activation"]
+        qrnn = QRNN(*[state[k] for k in keys])
+        qrnn.main.load_state_dict["network_state"]
+        qrnn.optimizer.load_state_dict["optimizer_state"]
