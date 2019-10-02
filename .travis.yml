@@ -19,5 +19,6 @@ deploy:
   github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
   target-branch: gh-pages
   keep-history: false
+  verbose: true
   on:
     branch: master
