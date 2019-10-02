@@ -1,3 +1,9 @@
+"""
+qprof.data
+==========
+
+This module provides a pytorch-compatible interface to the qprof training data.
+"""
 import glob
 import numpy as np
 import netCDF4
@@ -11,7 +17,21 @@ from torch.utils.data import Dataset
 ################################################################################
 
 class RainRates(Dataset):
+    """
+    Pytorch dataset for the GProf training data.
+
+    This class is a wrapper around the netCDF4 files that are used to store
+    the GProf training data. It provides as input vector the brightness
+    temperatures and as output vector the surface precipitation.
+    """
     def __init__(self, path):
+        """
+        Create instance of the dataset from a given file path.
+
+        Args:
+            path: The path to the netCDF4 file with the training data
+        """
+
         super(RainRates, self).__init__()
 
         try:
@@ -34,9 +54,23 @@ class RainRates(Dataset):
         self.maxs = self.file["tbs_max"][:]
 
     def __len__(self):
+        """
+        The number of entries in the training data. This is part of the
+        pytorch interface for datasets.
+
+        Return:
+            int: The number of samples in the data set
+        """
         return self.n_samples
 
     def __getitem__(self, i):
+        """
+        Return element from the dataset. This is part of the
+        pytorch interface for datasets.
+
+        Args:
+            i(int): The index of the sample to return
+        """
         x = self.file.variables['tbs'][i, :]
         x = (x - self.mins) / (self.maxs - self.mins)
         y = self.file.variables['surface_precipitation'][i]

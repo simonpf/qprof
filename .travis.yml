@@ -9,7 +9,7 @@ script:
   - cd doc
   - mkdir source
   - sphinx-apidoc -of source ..
-  - sphinx-build -b html . ..
+  - sphinx-build -b html . ../html
 
 deploy:
   provider: pages

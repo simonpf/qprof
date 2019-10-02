@@ -7,7 +7,7 @@ precipitation using neural networks.
 .. toctree::
    :maxdepth: 2
 
-   source/models
+   source/qprof
 
 
 
