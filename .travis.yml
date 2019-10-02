@@ -8,7 +8,7 @@ before_install:
 script:
   - cd doc
   - mkdir source
-  - sphinx-apidoc -of source ..
+  - sphinx-apidoc -oe source ..
   - sphinx-build -b html . ../html
   - cd ../html
   - touch .nojekyll
