@@ -10,7 +10,6 @@ script:
   - mkdir source
   - sphinx-apidoc -of source ..
   - sphinx-build -b html . ..
-  - make html
 
 deploy:
   provider: pages
