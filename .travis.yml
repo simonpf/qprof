@@ -10,6 +10,8 @@ script:
   - mkdir source
   - sphinx-apidoc -of source ..
   - sphinx-build -b html . ../html
+  - cd ../html
+  - touch .nojekyll
 
 deploy:
   provider: pages
