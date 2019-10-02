@@ -1,0 +1,23 @@
+sudo: required
+
+language: python
+
+before_install:
+- pip install sphinx
+
+script:
+  - cd doc
+  - mkdir source
+  - sphinx-apidoc source ..
+  - sphinx-build -b html . ..
+  - make html
+
+deploy:
+  provider: pages
+  local-dir: html
+  skip-cleanup: true
+  github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
+  target-branch: gh-pages
+  keep-history: false
+  on:
+    branch: master
