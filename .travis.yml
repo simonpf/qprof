@@ -8,7 +8,7 @@ before_install:
 script:
   - cd doc
   - mkdir source
-  - sphinx-apidoc source ..
+  - sphinx-apidoc -of source ..
   - sphinx-build -b html . ..
   - make html
 
