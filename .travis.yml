@@ -8,6 +8,8 @@ before_install:
 script:
   - cd doc
   - export PYTHONPATH=${HOME}
+  - echo $PYTHONPATH
+  - pwd
   - sphinx-apidoc -eo source ..
   - sphinx-build -b html . ../html
   - cd ../html
