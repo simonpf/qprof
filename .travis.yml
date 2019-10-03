@@ -6,8 +6,8 @@ before_install:
 - pip install sphinx
 
 script:
+  - export PYTHONPATH=`pwd`
   - cd doc
-  - export PYTHONPATH=${HOME}
   - echo $PYTHONPATH
   - pwd
   - sphinx-apidoc -eo source ..
