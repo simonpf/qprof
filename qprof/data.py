@@ -115,7 +115,7 @@ def check_sample(data):
     """
     return all([data[i] > 0 and data[i] < 1000 for i in range(13, 26)])
 
-def write_to_file(file, data):
+def write_to_file(file, data, subsampling = 0.01):
     """
     Write data to NetCDF file.
 
@@ -133,9 +133,9 @@ def write_to_file(file, data):
     v_tbs_min = file.variables["tbs_min"]
     v_tbs_max = file.variables["tbs_max"]
 
-    v_year = file.variables["tbs_min"]
-    v_month = file.variables["tbs_max"]
-    v_day = file.variables["tbs_max"]
+    v_year = file.variables["year"]
+    v_month = file.variables["month"]
+    v_day = file.variables["day"]
     v_hour = file.variables["hour"]
     v_minute = file.variables["minute"]
     v_second = file.variables["second"]
@@ -143,9 +143,19 @@ def write_to_file(file, data):
     i = file.dimensions["samples"].size
     for d in data:
 
+        if np.random.rand() > subsampling:
+            continue
+
         # Check if sample is valid.
         if not check_sample(d):
             continue
+
+        v_year[i] = d[2]
+        v_month[i] = d[3]
+        v_day[i] = d[4]
+        v_hour[i] = d[5]
+        v_year[i] = d[6]
+        v_second[i] = d[7]
 
         v_lats[i] = d[8]
         v_lons[i] = d[9]
@@ -194,7 +204,7 @@ def create_output_file(path):
 
     return file
 
-def extract_data(year, month, day, file):
+def extract_data(base_path, file, subsampling = 0.01):
     """
     Extract training data from GPROF binary files for given year, month and day.
 
@@ -204,18 +214,34 @@ def extract_data(year, month, day, file):
         day(int): The day for which to extract training data.
         file: File handle of the netCDF4 file into which to store the results.
     """
-    dendrite = os.path.join(os.environ["HOME"], "Dendrite")
-    year = str(year)
-    month = str(month)
-    if len (month) == 1:
-        month = "0" + month
-    day = str(day)
-    if len (day) == 1:
-        day = "0" + day
-    path = os.path.join(dendrite, "UserAreas", "Teo", "GPROFfiles", str(year) + str(month))
-    files = glob.glob(os.path.join(path, "GMI.CSU.20" + year + month + day + "*.dat"))
-
+    files = glob.glob(os.path.join(base_path, "**", "*.dat"))
     for f in tqdm.tqdm(files):
         with open(f, 'rb') as fn:
                 data = read_file(fn)
-                write_to_file(file, data)
+                write_to_file(file, data, subsampling = subsampling)
+
+#def extract_data(year, month, day, file):
+#    """
+#    Extract training data from GPROF binary files for given year, month and day.
+#
+#    Arguments:
+#        year(int): The year from which to extract the training data.
+#        month(int): The month from which to extract the training data.
+#        day(int): The day for which to extract training data.
+#        file: File handle of the netCDF4 file into which to store the results.
+#    """
+#    dendrite = os.path.join(os.environ["HOME"], "Dendrite")
+#    year = str(year)
+#    month = str(month)
+#    if len (month) == 1:
+#        month = "0" + month
+#    day = str(day)
+#    if len (day) == 1:
+#        day = "0" + day
+#    path = os.path.join(dendrite, "UserAreas", "Teo", "GPROFfiles", str(year) + str(month))
+#    files = glob.glob(os.path.join(path, "GMI.CSU.20" + year + month + day + "*.dat"))
+#
+#    for f in tqdm.tqdm(files):
+#        with open(f, 'rb') as fn:
+#                data = read_file(fn)
+#                write_to_file(file, data)

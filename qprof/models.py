@@ -231,7 +231,8 @@ class QRNN:
             y_pred = self.predict(x)
 
             for i in range(n_intervals):
-                l, r =  y_pred[:, i], y_pred[:, -(i + 1)]
+                l = y_pred[:, i]
+                r = y_pred[:, -(i + 1)]
                 counts[i] += np.logical_and(y >= l, y < r).sum()
 
             total += x.size()[0]
