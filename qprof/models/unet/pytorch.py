@@ -13,25 +13,30 @@ class Block(nn.Sequential):
         # First layer, increase number of features.
         if depth == 1:
             if no_activation:
-                modules = [nn.ConstantPad2d(1, -1.0),
+                modules = [nn.ConstantPad2d(1, 0.0),
                            nn.Conv2d(in_features, out_features, 3)]
             else:
-                modules = [nn.ConstantPad2d(1, -1.0),
+                modules = [nn.ConstantPad2d(1, 0.0),
                            nn.Conv2d(in_features, out_features, 3),
+                           nn.BatchNorm2d(out_features),
                            activation]
         else:
-            modules = [nn.ConstantPad2d(1, -1.0),
-                       nn.Conv2d(out_features, out_features, 3),
+            modules = [nn.ConstantPad2d(1, 0.0),
+                       nn.Conv2d(in_features, out_features, 3),
+                       nn.BatchNorm2d(out_features),
                        activation]
             if no_activation:
-                modules += [nn.ConstantPad2d(1, -1.0),
+                modules += [nn.ConstantPad2d(1, 0.0),
                             nn.Conv2d(out_features, out_features, 3),
+                            nn.BatchNorm2d(out_features),
                             activation] * max(depth - 2, 0)
-                modules += [nn.ConstantPad2d(1, -1.0),
-                            nn.Conv2d(out_features, out_features, 3)]
-            else:
-                modules += [nn.ConstantPad2d(1, -1.0),
+                modules += [nn.ConstantPad2d(1, 0.0),
                             nn.Conv2d(out_features, out_features, 3),
+                            nn.BatchNorm2d(out_features)]
+            else:
+                modules += [nn.ConstantPad2d(1, 0.0),
+                            nn.Conv2d(out_features, out_features, 3),
+                            nn.BatchNorm2d(out_features),
                             activation] * max(depth - 1, 0)
 
         super().__init__(*modules)
@@ -45,8 +50,12 @@ class UpSampler(nn.Sequential):
     def __init__(self,
                  features_in,
                  features_out):
-        modules = [nn.ConstantPad2d(1, -1.0),
-                   nn.Conv2d(features_in, features_out, 3)]
+        modules = [nn.ConvTranspose2d(features_in,
+                                      features_out,
+                                      3,
+                                      padding=1,
+                                      output_padding=1,
+                                      stride=2)]
         super().__init__(*modules)
 
 class UNet(nn.Module):
@@ -80,21 +89,24 @@ class UNet(nn.Module):
             features_in = features_in // 2
 
         self.head = nn.Conv2d(features_in, output_features, 3)
+        self.head = nn.Sequential(nn.ConstantPad2d(1, 0.0),
+                                  nn.Conv2d(features_in, output_features, 3))
 
+    def forward(self, x):
 
-        def __forward__(self, x):
+        features = []
+        for (b, s) in zip(self.down_blocks, self.down_samplers):
+            x = b(x)
+            features.append(x)
+            x = s(x)
 
-            features = []
-            for (b, s) in zip(self.down_blocks, self.down_samplers):
-                x = b(x)
-                features.append(x)
-                x = s(x)
+        x = self.center_block(x)
 
-            x = self.center_block(x)
+        for (b, u, f) in zip(self.up_blocks, self.up_samplers, features[::-1]):
+            x = u(x)
+            x = torch.cat([x, f], 1)
+            x = b(x)
 
-            for (b, u, f) in zip(self.up_blocks, self.up_samplers, reverse(features)):
-                x = u(x)
-                x = torch.cat([x, f], 1)
-                x = b(x)
+        self.features = features
 
-            return self.head(x)
+        return self.head(x)

@@ -24,7 +24,11 @@ class RainRates(Dataset):
     the GProf training data. It provides as input vector the brightness
     temperatures and as output vector the surface precipitation.
     """
-    def __init__(self, path):
+    def __init__(self,
+                 path,
+                 batch_size = None,
+                 normalize_rain_rates = False,
+                 mode = "training"):
         """
         Create instance of the dataset from a given file path.
 
@@ -47,11 +51,33 @@ class RainRates(Dataset):
         else:
             path = os.path.join(qprof_path, path)
 
-        self.file = netCDF4.Dataset(path, mode = "r")
-        self.n_samples = self.file.dimensions["samples"].size
 
+        self.file = netCDF4.Dataset(path, mode = "r")
+        days = self.file.variables["day"][:]
+
+        self.mode = mode
+        self.train_indices = np.where(days > 1)[0]
+        np.random.shuffle(self.train_indices)
+        self.test_indices = np.where(days <= 1)[0]
+
+        if self.mode == "training":
+            self.indices = self.train_indices
+        else:
+            self.indices = self.test_indices
+        self.size = self.indices.size
+        self.size = 10000000
+
+        self.n_samples = self.indices.size
         self.mins = self.file["tbs_min"][:]
         self.maxs = self.file["tbs_max"][:]
+        self.batch_size = batch_size
+
+        self.normalize_rain_rates = normalize_rain_rates
+        if self.normalize_rain_rates:
+            self.rr_max = self.file.variables["surface_precipitation"][:].max()
+            self.rr_min = self.file.variables["surface_precipitation"][:].min()
+            self.rr_mean = self.file.variables["surface_precipitation"][:].mean()
+            self.rr_std = self.file.variables["surface_precipitation"][:].std()
 
     def __len__(self):
         """
@@ -61,7 +87,10 @@ class RainRates(Dataset):
         Return:
             int: The number of samples in the data set
         """
-        return self.n_samples
+        if self.batch_size is None:
+            return self.size
+        else:
+            return self.size // self.batch_size
 
     def __getitem__(self, i):
         """
@@ -71,9 +100,17 @@ class RainRates(Dataset):
         Args:
             i(int): The index of the sample to return
         """
-        x = self.file.variables['tbs'][i, :]
+        if self.batch_size is None:
+            bs = 1
+        else:
+            bs = self.batch_size
+
+        indices = self.indices[i * bs : (i + 1) * bs]
+        x = self.file.variables['tbs'][indices, :]
         x = (x - self.mins) / (self.maxs - self.mins)
-        y = self.file.variables['surface_precipitation'][i]
+        y = self.file.variables['surface_precipitation'][indices]
+        if self.normalize_rain_rates:
+            y = (y - self.rr_mean) / self.rr_std
         return torch.tensor(x), torch.tensor(y)
 
 ################################################################################
@@ -218,7 +255,7 @@ def extract_data(base_path, file, subsampling = 0.01):
     for f in tqdm.tqdm(files):
         with open(f, 'rb') as fn:
                 data = read_file(fn)
-                write_to_file(file, data, subsampling = subsampling)
+                write_to_file(f, data, subsampling = subsampling)
 
 #def extract_data(year, month, day, file):
 #    """
