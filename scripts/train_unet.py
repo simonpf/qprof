@@ -1,5 +1,3 @@
-%load_ext autoreload
-%autoreload 2
 import numpy as np
 import os
 import torch
@@ -21,8 +19,8 @@ parser.add_argument("n_features", type=int, nargs=1, help="Number of features in
 
 args = parser.parse_args()
 training_data = args.training_data[0]
-level = data.levels[0]
-n_features = data.n_features[0]
+level = args.levels[0]
+n_features = args.n_features[0]
 
 ################################################################################
 # Train network
