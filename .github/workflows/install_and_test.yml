@@ -16,5 +16,5 @@ jobs:
       - run: pip install .
       - run: pytest test
         env:
-          QUANTNN_SFTP_USER: ${{ secrets.QUANTNN_SFTP_USER }}
-          QUANTNN_SFTP_PASSWORD: ${{ secrets.QUANTNN_SFTP_PASSWORD }}
+          DENDRITE_USER: ${{ secrets.DENDRITE_USER }}
+          DENDRITE_PASSWORD: ${{ secrets.DENDRITE_PASSWORD }}
