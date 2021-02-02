@@ -12,7 +12,7 @@ import re
 import numpy as np
 import xarray
 
-from regn.data.csu import retrieval
+from qprof.file_formats import retrieval
 from pathlib import Path
 
 LOGGER = logging.getLogger(__name__)
