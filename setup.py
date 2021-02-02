@@ -19,17 +19,15 @@ setup(
         "numpy",
         "tqdm",
         "quantnn",
-        "torch"
+        "torch",
+        "xarray"
     ],
     extras_require={
         "training_data_processing": ["netCDF4",]
     },
     python_requires='>=3.6',
-    project_urls={  # Optional
-        'Source': 'https://github.com/simonpf/qprof/',
-    },
-    entry_points={
-        'console_scripts': ['qprof=qprof.qprof:main'],
-    },
+    project_urls={'Source': 'https://github.com/simonpf/qprof/'},
+    entry_points={'console_scripts': ['qprof=qprof.qprof:main'],},
+    include_package_data=True,
 )
 
