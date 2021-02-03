@@ -56,7 +56,7 @@ def main():
 
     normalizer = get_normalizer()
     model = get_model()
-    input = InputData(input_file, normalizer, scans_per_batch=8)
+    input = InputData(input_file, normalizer, scans_per_batch=512)
 
     results = input.run_retrieval(model)
     total_scans = input.n_scans

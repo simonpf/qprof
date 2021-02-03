@@ -9,6 +9,7 @@ preprocessor data and the neural network model.
 import numpy as np
 import xarray
 import quantnn.quantiles as qq
+import torch
 from torch.utils.data import Dataset
 from qprof.file_formats.preprocessor import GPROFPreprocessorFile, N_CHANNELS
 
@@ -22,7 +23,7 @@ class InputData(Dataset):
     def __init__(self,
                  filename,
                  normalizer,
-                 scans_per_batch=4):
+                 scans_per_batch=128):
         """
         Create a new input data object.
 
@@ -101,43 +102,52 @@ class InputData(Dataset):
         Returns:
             xarray.Dataset containing the retrieval results.
         """
-        quantiles = qrnn.quantiles
+        quantiles = torch.tensor(qrnn.quantiles).float()
+        n_pixels = self.n_pixels
+        n_scans = self.n_scans
+        n_quantiles = len(quantiles)
 
-        y_pred = np.zeros((self.n_scans, self.n_pixels, len(quantiles)))
-        mean = np.zeros((self.n_scans, self.n_pixels))
-        first_tertial = np.zeros((self.n_scans, self.n_pixels))
-        second_tertial = np.zeros((self.n_scans, self.n_pixels))
-        pop = np.zeros((self.n_scans, self.n_pixels))
+        y_pred = torch.zeros((n_scans, n_pixels, n_quantiles))
+        mean = torch.zeros((n_scans, n_pixels))
+        first_tertial = torch.zeros((n_scans, n_pixels))
+        second_tertial = torch.zeros((n_scans, n_pixels))
+        pop = torch.zeros((n_scans, n_pixels))
 
-        for i in range(len(self)):
-            x = self[i]
-            y = qrnn.predict(x)
 
-            i_start = i * self.scans_per_batch
-            i_end = (i + 1) * self.scans_per_batch
-            y_pred[i_start:i_end, :, :] = y.reshape(-1, self.n_pixels, len(quantiles))
+        with torch.no_grad():
+            for i in range(len(self)):
 
-            means = qq.posterior_mean(y, quantiles, quantile_axis=1)
-            mean[i_start:i_end] = means.reshape(-1, self.n_pixels)
+                i_start = i * self.scans_per_batch
+                i_end = (i + 1) * self.scans_per_batch
 
-            t = qq.posterior_quantiles(y, quantiles, [0.333], quantile_axis=1)
-            first_tertial[i_start:i_end] = t.reshape(-1, self.n_pixels)
-            t = qq.posterior_quantiles(y, quantiles, [0.666], quantile_axis=1)
-            second_tertial[i_start:i_end] = t.reshape(-1, self.n_pixels)
+                x = torch.tensor(self[i]).float().detach()
+                y = qrnn.model(x).detach()
 
-            p =  qq.probability_larger_than(y, quantiles, 0.01, quantile_axis=1)
-            pop[i_start:i_end] = p.reshape(-1, self.n_pixels)
+
+                y_pred[i_start:i_end, :, :] = y.reshape(-1, n_pixels, n_quantiles)
+
+                means = qq.posterior_mean(y, quantiles, quantile_axis=1)
+
+                mean[i_start:i_end] = means.reshape(-1, self.n_pixels)
+
+                t = qq.posterior_quantiles(y, quantiles, [0.333], quantile_axis=1)
+                first_tertial[i_start:i_end] = t.reshape(-1, self.n_pixels)
+                t = qq.posterior_quantiles(y, quantiles, [0.666], quantile_axis=1)
+                second_tertial[i_start:i_end] = t.reshape(-1, self.n_pixels)
+
+                p = qq.probability_larger_than(y, quantiles, 0.01, quantile_axis=1)
+                pop[i_start:i_end] = p.reshape(-1, self.n_pixels)
 
 
         dims = ["scans", "pixels", "quantiles"]
 
         data = {
-            "quantiles": (("quantiles",), quantiles),
-            "precip_quantiles": (dims, y_pred),
-            "precip_mean": (dims[:2], mean),
-            "precip_1st_tertial": (dims[:2], first_tertial),
-            "precip_3rd_tertial": (dims[:2], second_tertial),
-            "precip_pop": (dims[:2], pop)
+            "quantiles": (("quantiles",), qrnn.quantiles),
+            "precip_quantiles": (dims, y_pred.detach().numpy()),
+            "precip_mean": (dims[:2], mean.detach().numpy()),
+            "precip_1st_tertial": (dims[:2], first_tertial.detach().numpy()),
+            "precip_3rd_tertial": (dims[:2], second_tertial.detach().numpy()),
+            "precip_pop": (dims[:2], pop.detach().numpy())
         }
         return xarray.Dataset(data)
 
