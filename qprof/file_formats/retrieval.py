@@ -160,12 +160,12 @@ class GPROFRetrievalFile:
         """
         The start date of the granule.
         """
-        year = self.orbit_header["granule_start_date"]["year"]
-        month = self.orbit_header["granule_start_date"]["month"]
-        day = self.orbit_header["granule_start_date"]["day"]
-        hour = self.orbit_header["granule_start_date"]["hour"]
-        minute = self.orbit_header["granule_start_date"]["minute"]
-        second = self.orbit_header["granule_start_date"]["second"]
+        year = self.orbit_header["granule_start_date"]["year"][0]
+        month = self.orbit_header["granule_start_date"]["month"][0]
+        day = self.orbit_header["granule_start_date"]["day"][0]
+        hour = self.orbit_header["granule_start_date"]["hour"][0]
+        minute = self.orbit_header["granule_start_date"]["minute"][0]
+        second = self.orbit_header["granule_start_date"]["second"][0]
         return datetime(year, month, day, hour, minute, second)
 
     @property
@@ -173,12 +173,12 @@ class GPROFRetrievalFile:
         """
         The end date of the granule.
         """
-        year = self.orbit_header["granule_end_date"]["year"]
-        month = self.orbit_header["granule_end_date"]["month"]
-        day = self.orbit_header["granule_end_date"]["day"]
-        hour = self.orbit_header["granule_end_date"]["hour"]
-        minute = self.orbit_header["granule_end_date"]["minute"]
-        second = self.orbit_header["granule_end_date"]["second"]
+        year = self.orbit_header["granule_end_date"]["year"][0]
+        month = self.orbit_header["granule_end_date"]["month"][0]
+        day = self.orbit_header["granule_end_date"]["day"][0]
+        hour = self.orbit_header["granule_end_date"]["hour"][0]
+        minute = self.orbit_header["granule_end_date"]["minute"][0]
+        second = self.orbit_header["granule_end_date"]["second"][0]
         return datetime(year, month, day, hour, minute, second)
 
     def __repr__(self):

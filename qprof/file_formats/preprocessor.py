@@ -126,12 +126,12 @@ class GPROFPreprocessorFile:
         The scan date of the first header in the granule.
         """
         header = self.get_scan_header(0)
-        year = header["scan_date"]["year"]
-        month = header["scan_date"]["month"]
-        day = header["scan_date"]["day"]
-        hour = header["scan_date"]["hour"]
-        minute = header["scan_date"]["minute"]
-        second = header["scan_date"]["second"]
+        year = header["scan_date"]["year"][0]
+        month = header["scan_date"]["month"][0]
+        day = header["scan_date"]["day"][0]
+        hour = header["scan_date"]["hour"][0]
+        minute = header["scan_date"]["minute"][0]
+        second = header["scan_date"]["second"][0]
         return datetime(year, month, day, hour, minute, second)
 
     @property
@@ -140,12 +140,12 @@ class GPROFPreprocessorFile:
         The scan data of the last header in the granule.
         """
         header = self.get_scan_header(-1)
-        year = header["scan_date"]["year"]
-        month = header["scan_date"]["month"]
-        day = header["scan_date"]["day"]
-        hour = header["scan_date"]["hour"]
-        minute = header["scan_date"]["minute"]
-        second = header["scan_date"]["second"]
+        year = header["scan_date"]["year"][0]
+        month = header["scan_date"]["month"][0]
+        day = header["scan_date"]["day"][0]
+        hour = header["scan_date"]["hour"][0]
+        minute = header["scan_date"]["minute"][0]
+        second = header["scan_date"]["second"][0]
         return datetime(year, month, day, hour, minute, second)
 
     def __repr__(self):
