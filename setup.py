@@ -6,7 +6,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='qprof',
+    name='gpm-qprof',
     version='0.0.1dev',
     description='The operational QRNN-based implementation of GPROF.',
     long_description=long_description,
