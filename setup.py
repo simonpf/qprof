@@ -14,7 +14,7 @@ setup(
     url='https://github.com/simonpf/regn',  # Optional
     author='Simon Pfreundschuh',  # Optional
     author_email='simon.pfreundschuh@chalmers.se',  # Optional
-    packages=setuptools.find_packages(),
+    packages=find_packages(),
     install_requires=[
         "numpy",
         "tqdm",
