@@ -28,7 +28,8 @@ GMI_BIN_HEADER_TYPES = np.dtype(
      ("sensor", "a5"),
      ("frequencies", [(f"f_{i:02}", np.float32) for i in range(N_FREQS)]),
      ("nominal_eia", [(f"f_{i:02}", np.float32) for i in range(N_FREQS)]),
-     ])
+     ]
+)
 
 
 GMI_BIN_RECORD_TYPES = np.dtype(
@@ -155,6 +156,9 @@ class GPROFGMIBinFile:
         results["tcwv"] = self.tcwv * np.ones(1, dtype=np.float)
         results["bin_temperature"] = self.bin_temperature * np.ones(1)
         return results
+
+    def __len__(self):
+        return 1
 
     def __repr__(self):
         satellite = self.header["satellite_code"].tobytes().decode()

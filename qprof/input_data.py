@@ -6,12 +6,30 @@ qprof.input_data
 This module defines the InputData class, which acts as interface between the
 preprocessor data and the neural network model.
 """
+from pathlib import Path
+
 import numpy as np
 import xarray
 import quantnn.quantiles as qq
 import torch
 from torch.utils.data import Dataset
 from qprof.file_formats.preprocessor import GPROFPreprocessorFile, N_CHANNELS
+from qprof.file_formats.bin import GPROFGMIBinFile
+
+XARRAY_AVAILABLE = False
+try:
+    import xarray
+    XARRAY_AVAILABLE = True
+except ImportError:
+    pass
+
+
+NETCDF4_AVAILABLE = False
+try:
+    import netCDF4
+    NETCDF4_AVAILABLE = True
+except ImportError:
+    pass
 
 
 class InputData(Dataset):
@@ -165,16 +183,125 @@ class InputData(Dataset):
         return preprocessor_file.write_retrieval_results(path, results)
 
 
+class BinInputData(Dataset):
+    """
+    Torch interface for processing of GPROF bin files.
+    """
+
+    def __init__(self,
+                 filename,
+                 normalizer):
+        self.bin_file = GPROFGMIBinFile(filename)
+        self.normalizer = normalizer
+
+    def get_batch(self):
+        """
+        Return bin data as batch for retrieval processing.
+        """
+        data = self.bin_file.handle
+
+        # Brightness temperatures
+        bts = data["brightness_temperatures"][:, :]
+
+        # 2m temperature
+        t2m = data["two_meter_temperature"][:]
+        t2m = t2m.reshape(-1, 1)
+        # Total precipitable water.
+        tcwv = data["total_column_water_vapor"][:]
+        tcwv = tcwv.reshape(-1, 1)
+
+        # Surface type
+        n = bts.shape[0]
+        n_types = 19
+        st_1h = np.zeros((n, n_types), dtype=np.float32)
+        st_1h[np.arange(n), self.bin_file.surface_type] = 1.0
+
+        # Airmass type
+        n_types = 4
+        am_1h = np.zeros((n, n_types), dtype=np.float32)
+        am_1h[np.arange(n), self.bin_file.airmass_type] = 1.0
+
+        x = np.concatenate([bts, t2m, tcwv, st_1h, am_1h], axis=1)
+        return self.normalizer(x)
+
+    def run_retrieval(self, qrnn):
+        """
+        Run retrieval with given QRNN model.
+
+        Args:
+            qrnn: ``quantnn.QRNN`` model to use in the retrieval.
+
+        Returns:
+            xarray.Dataset containing the retrieval results.
+        """
+        quantiles = torch.tensor(qrnn.quantiles).float()
+
+        with torch.no_grad():
+            for i in range(len(self)):
+                x = torch.tensor(self[i]).float().detach()
+                y = qrnn.model(x).detach()
+
+                y_pred = y
+                means = qq.posterior_mean(y, quantiles, quantile_axis=1)
+                mean = means
+
+                t = qq.posterior_quantiles(y, quantiles, [0.333], quantile_axis=1)
+                first_tertial = t.reshape(-1)
+                t = qq.posterior_quantiles(y, quantiles, [0.666], quantile_axis=1)
+                second_tertial = t.reshape(-1)
+
+                p = qq.probability_larger_than(y, quantiles, 0.01, quantile_axis=1)
+                pop = p.reshape(-1)
+
+        dims = ["profiles"]
+
+        data = {
+            "quantiles": (("quantiles",), qrnn.quantiles),
+            "truth": (dims, self.bin_file.handle["surface_precip"]),
+            "precip_mean": (dims, mean.detach().numpy()),
+            "precip_1st_tertial": (dims, first_tertial.detach().numpy()),
+            "precip_3rd_tertial": (dims, second_tertial.detach().numpy()),
+            "precip_pop": (dims, pop.detach().numpy())
+        }
+        return xarray.Dataset(data)
+
     def __len__(self):
         """
         The number of batches in the dataset.
         """
-        return self.n_batches
+        return 1
 
     def __getitem__(self, i):
         """
         Return batch from dataset.
         """
-        if i > self.n_batches:
+
+        if i > 0:
             raise IndexError()
-        return self.get_batch(i)
+        return self.get_batch()
+
+    def _get_retrieval_filename(self):
+        """
+        Returns the retrieval filename, which is just the name of the input
+        BIN file with the file suffix replaced by .nc.
+        """
+        return self.bin_file.filename.name[:-3] + "nc"
+
+    def write_retrieval_results(self, path, results):
+        """
+        Write retrieval result to GPROF binary format.
+
+        Args:
+            path: The folder to which to write the result. The filename
+                  itself follows the GPORF naming scheme.
+            results: Dictionary containing the retrieval results.
+
+        Returns:
+
+            Path object to the created binary file.
+        """
+        filename = Path(path)
+        if filename.is_dir():
+             filename = filename / self._get_retrieval_filename()
+        results.to_netcdf(filename)
+        return filename
