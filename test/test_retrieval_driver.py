@@ -9,7 +9,7 @@ def test_bin_retrieval(test_data):
     input_file = test_data["bin_file"]
     folder = input_file.parent
 
-    driver = RetrievalDriver(folder, "*.bin", folder, RetrievalDriver)
+    driver = RetrievalDriver(folder, "*.bin", folder, BinInputData)
     driver.run()
 
     assert len(driver.processed) > 0

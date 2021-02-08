@@ -16,21 +16,6 @@ from torch.utils.data import Dataset
 from qprof.file_formats.preprocessor import GPROFPreprocessorFile, N_CHANNELS
 from qprof.file_formats.bin import GPROFGMIBinFile
 
-XARRAY_AVAILABLE = False
-try:
-    import xarray
-    XARRAY_AVAILABLE = True
-except ImportError:
-    pass
-
-
-NETCDF4_AVAILABLE = False
-try:
-    import netCDF4
-    NETCDF4_AVAILABLE = True
-except ImportError:
-    pass
-
 
 class InputData(Dataset):
     """

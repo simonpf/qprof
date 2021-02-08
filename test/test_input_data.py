@@ -1,5 +1,5 @@
 """
-Test for the qprof.input_data module.
+Tests for the qprof.input_data module.
 """
 import numpy as np
 import pytest
